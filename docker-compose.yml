@@ -1,0 +1,183 @@
+name: rhu-labchain
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/nginx/Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      web:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      records-service:
+        condition: service_healthy
+      storage-service:
+        condition: service_healthy
+      verification-service:
+        condition: service_healthy
+    networks: [gateway_net, app_internal]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    networks: [gateway_net]
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: auth-service
+      PORT: 3001
+      DB_DRIVER: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: labchain_auth
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Run npm run setup first}
+      MYSQL_DATABASE: auth_db
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Run npm run setup first}
+      TRUST_PROXY: "true"
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-7}
+      DEV_SEED_PASSWORD: ${DEV_SEED_PASSWORD:?Run npm run setup first}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [app_internal, data_internal]
+    restart: unless-stopped
+
+  records-service:
+    build:
+      context: .
+      dockerfile: services/records-service/Dockerfile
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: records-service
+      PORT: 3002
+      DB_DRIVER: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: labchain_records
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Run npm run setup first}
+      MYSQL_DATABASE: records_db
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Run npm run setup first}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Run npm run setup first}
+      STORAGE_SERVICE_URL: http://storage-service:3003
+      VERIFICATION_SERVICE_URL: http://verification-service:3004
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      storage-service:
+        condition: service_healthy
+      verification-service:
+        condition: service_healthy
+    networks: [app_internal, data_internal]
+    restart: unless-stopped
+
+  storage-service:
+    build:
+      context: .
+      dockerfile: services/storage-service/Dockerfile
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: storage-service
+      PORT: 3003
+      DB_DRIVER: mysql
+      OBJECT_STORE_DRIVER: ipfs
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: labchain_storage
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Run npm run setup first}
+      MYSQL_DATABASE: storage_db
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Run npm run setup first}
+      STORAGE_MASTER_KEY_BASE64: ${STORAGE_MASTER_KEY_BASE64:?Run npm run setup first}
+      IPFS_API_URL: http://ipfs:5001
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ipfs:
+        condition: service_healthy
+    networks: [app_internal, data_internal]
+    restart: unless-stopped
+
+  verification-service:
+    build:
+      context: .
+      dockerfile: services/verification-service/Dockerfile
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: verification-service
+      AUTH_SERVICE_URL: http://auth-service:3001
+      PORT: 3004
+      DB_DRIVER: mysql
+      LEDGER_DRIVER: file
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: labchain_verification
+      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:?Run npm run setup first}
+      MYSQL_DATABASE: verification_db
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?Run npm run setup first}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Run npm run setup first}
+      QR_TOKEN_SECRET: ${QR_TOKEN_SECRET:?Run npm run setup first}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      DATA_ROOT: /data
+    volumes:
+      - verification_data:/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks: [app_internal, data_internal]
+    restart: unless-stopped
+
+  mysql:
+    build:
+      context: .
+      dockerfile: infrastructure/mysql/Dockerfile
+    command: ["--default-time-zone=+00:00", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run npm run setup first}
+      MYSQL_APP_PASSWORD: ${MYSQL_APP_PASSWORD:?Run npm run setup first}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks: [data_internal]
+    restart: unless-stopped
+
+  ipfs:
+    build:
+      context: .
+      dockerfile: infrastructure/ipfs/Dockerfile
+    environment:
+      IPFS_PROFILE: server
+    volumes:
+      - ipfs_data:/data/ipfs
+    healthcheck:
+      test: ["CMD-SHELL", "ipfs id >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+    networks: [data_internal]
+    restart: unless-stopped
+
+networks:
+  gateway_net: {}
+  app_internal: {}
+  data_internal:
+    internal: true
+
+volumes:
+  mysql_data: {}
+  ipfs_data: {}
+  verification_data: {}

@@ -1,0 +1,25 @@
+OrdererOrgs:
+  - Name: Orderer
+    Domain: local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS: [localhost]
+
+PeerOrgs:
+  - Name: RHULab
+    Domain: rhu.local
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS: [localhost]
+    Users:
+      Count: 1
+  - Name: Verifier
+    Domain: verifier.local
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS: [localhost]
+    Users:
+      Count: 1

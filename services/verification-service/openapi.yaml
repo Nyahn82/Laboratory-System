@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info:
+  title: RHU LabChain Verification Service
+  version: 0.1.0
+  description: Opaque proof registration and strictly redacted public QR verification.
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      responses:
+        '200': { description: Healthy }
+  /ready:
+    get:
+      summary: Metadata and ledger readiness, including simulated mode
+      responses:
+        '200': { description: Ready }
+        '503': { description: Dependency unavailable }
+  /registrations:
+    post:
+      summary: Register an opaque encrypted-record proof
+      security: [{ internalToken: [] }]
+      responses:
+        '201': { description: Registered }
+        '200': { description: Existing idempotent registration }
+  /records/{recordId}/versions/{version}/release:
+    post:
+      summary: Commit a release timestamp and return a QR token once
+      security: [{ internalToken: [] }]
+      responses:
+        '200': { description: Released }
+  /records/{recordId}/versions/{version}/revoke:
+    post:
+      summary: Revoke a ledger proof and active QR tokens
+      security: [{ internalToken: [] }]
+      responses:
+        '200': { description: Revoked }
+  /records/{recordId}/history:
+    get:
+      summary: Append-only record history
+      security: [{ internalToken: [] }]
+      responses:
+        '200': { description: History }
+  /public/{token}:
+    get:
+      summary: Verify without returning PII, result values, hashes, CIDs, or token data
+      responses:
+        '200': { description: Redacted validity response }
+  /public/verify/{token}:
+    get:
+      summary: Compatibility alias for redacted verification
+      responses:
+        '200': { description: Redacted validity response }
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Service-Token

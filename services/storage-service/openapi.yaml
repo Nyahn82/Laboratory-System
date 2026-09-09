@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: RHU LabChain Encrypted Storage Service
+  version: 0.1.0
+  description: Internal API for canonical AES-256-GCM record packages and private object storage.
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      responses:
+        '200': { description: Healthy }
+  /ready:
+    get:
+      summary: Metadata and object-store readiness
+      responses:
+        '200': { description: Ready }
+        '503': { description: Dependency unavailable }
+  /packages:
+    post:
+      summary: Encrypt and store an immutable record version
+      security: [{ internalToken: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '201': { description: Created }
+        '200': { description: Existing idempotent package }
+        '409': { description: Immutable-version or idempotency conflict }
+  /packages/{recordId}/versions/{version}:
+    get:
+      summary: Retrieve and decrypt after caller authorization
+      security: [{ internalToken: [] }]
+      parameters:
+        - { in: path, name: recordId, required: true, schema: { type: string } }
+        - { in: path, name: version, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Authenticated plaintext package }
+  /packages/{recordId}/versions/{version}/verify:
+    post:
+      summary: Verify ciphertext hash, wrapped key, and authentication tag
+      security: [{ internalToken: [] }]
+      parameters:
+        - { in: path, name: recordId, required: true, schema: { type: string } }
+        - { in: path, name: version, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Verified without returning plaintext }
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Service-Token

@@ -1,0 +1,91 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererMSP
+    ID: OrdererMSP
+    MSPDir: /network/generated/organizations/ordererOrganizations/local/msp
+    Policies:
+      Readers: { Type: Signature, Rule: "OR('OrdererMSP.member')" }
+      Writers: { Type: Signature, Rule: "OR('OrdererMSP.member')" }
+      Admins: { Type: Signature, Rule: "OR('OrdererMSP.admin')" }
+    OrdererEndpoints: [orderer.local:7050]
+
+  - &RHULab
+    Name: RHULabMSP
+    ID: RHULabMSP
+    MSPDir: /network/generated/organizations/peerOrganizations/rhu.local/msp
+    Policies:
+      Readers: { Type: Signature, Rule: "OR('RHULabMSP.admin', 'RHULabMSP.peer', 'RHULabMSP.client')" }
+      Writers: { Type: Signature, Rule: "OR('RHULabMSP.admin', 'RHULabMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('RHULabMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('RHULabMSP.peer')" }
+    AnchorPeers:
+      - { Host: peer0.rhu.local, Port: 7051 }
+
+  - &Verifier
+    Name: VerifierMSP
+    ID: VerifierMSP
+    MSPDir: /network/generated/organizations/peerOrganizations/verifier.local/msp
+    Policies:
+      Readers: { Type: Signature, Rule: "OR('VerifierMSP.admin', 'VerifierMSP.peer', 'VerifierMSP.client')" }
+      Writers: { Type: Signature, Rule: "OR('VerifierMSP.admin', 'VerifierMSP.client')" }
+      Admins: { Type: Signature, Rule: "OR('VerifierMSP.admin')" }
+      Endorsement: { Type: Signature, Rule: "OR('VerifierMSP.peer')" }
+    AnchorPeers:
+      - { Host: peer0.verifier.local, Port: 7051 }
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
+    LifecycleEndorsement: { Type: ImplicitMeta, Rule: "MAJORITY Endorsement" }
+    Endorsement: { Type: ImplicitMeta, Rule: "MAJORITY Endorsement" }
+  Capabilities: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses: [orderer.local:7050]
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.local
+        Port: 7050
+        ClientTLSCert: /network/generated/organizations/ordererOrganizations/local/orderers/orderer.local/tls/server.crt
+        ServerTLSCert: /network/generated/organizations/ordererOrganizations/local/orderers/orderer.local/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
+    BlockValidation: { Type: ImplicitMeta, Rule: "ANY Writers" }
+  Capabilities: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers: { Type: ImplicitMeta, Rule: "ANY Readers" }
+    Writers: { Type: ImplicitMeta, Rule: "ANY Writers" }
+    Admins: { Type: ImplicitMeta, Rule: "MAJORITY Admins" }
+  Capabilities: *ChannelCapabilities
+
+Profiles:
+  LabRecordsChannel:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations: [*OrdererOrg]
+    Application:
+      <<: *ApplicationDefaults
+      Organizations: [*RHULab, *Verifier]

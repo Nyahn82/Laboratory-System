@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>RHU LabChain | System Workflow</title>
+<style>
+@page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;background:#e7edf2;color:#1b3042;font:11pt/1.48 Arial,sans-serif}.page{width:210mm;height:297mm;background:white;padding:16mm 17mm 17mm;position:relative;break-after:page;overflow:hidden}.page:last-child{break-after:auto}.eyebrow{font-size:9pt;font-weight:700;letter-spacing:1.8px;color:#087f83;text-transform:uppercase}h1{font-size:30pt;line-height:1.12;margin:10px 0 13px;letter-spacing:-1px}h2{font-size:22pt;line-height:1.2;margin:10px 0 15px}h3{font-size:12pt;margin:15px 0 7px;color:#087f83}p{margin:7px 0 12px}.lead{font-size:12pt;color:#506373}.note{background:#edf7f6;border-left:4px solid #07868a;padding:10px 13px;margin:12px 0;font-size:10pt}.footer{position:absolute;bottom:10mm;left:17mm;right:17mm;display:flex;justify-content:space-between;border-top:1px solid #d6e1e7;padding-top:8px;color:#647787;font-size:8pt}.flow{margin-top:18px}.step{display:grid;grid-template-columns:30px 145px 1fr;gap:11px;align-items:center;border-bottom:1px solid #dee7ed;padding:10px 0}.n{border-radius:50%;background:#087f83;color:white;width:27px;height:27px;text-align:center;line-height:27px;font-size:10pt;font-weight:bold}.step b{font-size:10.6pt}.step span{font-size:10pt;color:#4b6070}.step small{display:block;color:#087f83;font-size:8.5pt;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:10pt;margin:10px 0 14px}th{text-align:left;background:#1b3042;color:white;font-size:9pt;padding:9px}td{padding:9px;border-bottom:1px solid #dce5eb;vertical-align:top}td:first-child{font-weight:bold;width:28%}tbody tr:nth-child(even){background:#f4f7f9}.states{font:9.3pt/1.8 Consolas,monospace;background:#f2f6f8;padding:13px 15px;margin:12px 0;white-space:pre-wrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{padding:12px;border:1px solid #d5e2e9;border-radius:6px;font-size:10pt}.card b{display:block;color:#087f83;margin-bottom:4px}.pipeline{display:flex;flex-direction:column;gap:5px}.stage{border:1px solid #cedfe6;border-radius:6px;padding:10px 13px;font-size:10pt}.stage b{display:block;color:#087f83;margin-bottom:3px}.arrow{text-align:center;color:#087f83;line-height:15px;font-weight:bold}.small{font-size:9.3pt;color:#506373}.sources{font:8.4pt/1.6 Consolas,monospace;margin:9px 0;padding-left:18px}.branch{padding:10px 0;border-bottom:1px solid #dce5eb;font-size:10pt}.branch b{display:block;color:#087f83;margin-bottom:3px}@media screen{.page{margin:16px auto;box-shadow:0 3px 15px #0001}}
+</style></head><body>
+<section class="page">
+<div class="eyebrow">RHU LabChain / Workflow guide</div>
+<h1>From patient registration<br>to verified laboratory report</h1>
+<p class="lead">A practical map of the hybrid laboratory record system: who acts, what happens next, and when a result becomes available.</p>
+<div class="note"><b>Scope:</b> Phase One academic prototype. This guide describes the repository implementation and its documented operating modes. Use synthetic or formally de-identified records.</div>
+<div class="flow">
+<div class="step"><div class="n">1</div><b>Register patient<small>Registration / Cashier</small></b><span>Create or locate the patient record; link a patient login when portal access is needed.</span></div>
+<div class="step"><div class="n">2</div><b>Consult and request<small>Doctor</small></b><span>Record the consultation and create the laboratory request with selected tests or panels.</span></div>
+<div class="step"><div class="n">3</div><b>Classify payment<small>Registration / Cashier</small></b><span>Record Paid, Free, Waived, or Subsidized before specimen accession.</span></div>
+<div class="step"><div class="n">4</div><b>Handle specimen<small>Laboratory Staff</small></b><span>Assign accession/specimen identifiers, collect the sample, and record receipt or rejection.</span></div>
+<div class="step"><div class="n">5</div><b>Test and check quality<small>Laboratory Staff</small></b><span>Enter results, record quality control (QC), and resolve repeats or referrals before submission.</span></div>
+<div class="step"><div class="n">6</div><b>Submit and approve<small>Staff → Supervisor</small></b><span>Submit a result version. A different authorized user reviews and approves, or rejects with a reason.</span></div>
+<div class="step"><div class="n">7</div><b>Store and register<small>Automated services</small></b><span>Encrypt the approved snapshot, store the package, and register its proof. Save both receipts.</span></div>
+<div class="step"><div class="n">8</div><b>Release report<small>Laboratory Supervisor</small></b><span>Release the registered version. The ledger release receipt enables the report and verification URL.</span></div>
+<div class="step"><div class="n">9</div><b>Review, access, verify<small>Doctor / Patient / Public</small></b><span>The doctor records review; the patient sees their released results; QR verification shows redacted proof.</span></div>
+</div>
+<p class="small">Read from top to bottom. Exception paths return work for correction or hold publication until a failed step is resolved.</p>
+<div class="footer"><span>System workflow • Source snapshot: 07 September 2026</span><span>01 / 04</span></div>
+</section>
+<section class="page">
+<div class="eyebrow">Responsibilities and checkpoints</div><h2>Each role has a defined handoff</h2>
+<table><thead><tr><th>Role</th><th>Workflow responsibility</th><th>Handoff / boundary</th></tr></thead><tbody>
+<tr><td>System Administrator</td><td>Manage accounts, roles, and operational oversight.</td><td>No automatic clinical superuser access.</td></tr>
+<tr><td>Registration / Cashier</td><td>Manage patient identity, account linking, visits, and payment classification.</td><td>Patient and payment data ready for the clinical team.</td></tr>
+<tr><td>Doctor</td><td>Record consultations, request tests, and review released reports for authorized patients.</td><td>Review is a separate event after release.</td></tr>
+<tr><td>Laboratory Staff</td><td>Accession and handle specimens; enter results; manage QC, repeats, referrals, and submission.</td><td>Every required item must be ready for verification.</td></tr>
+<tr><td>Laboratory Supervisor</td><td>Approve or reject submitted results; release registered versions.</td><td>Cannot approve a version they submitted.</td></tr>
+<tr><td>Patient</td><td>Sign in to view their own released records.</td><td>Account must be linked to the patient record.</td></tr>
+<tr><td>Public Verifier</td><td>Open the opaque QR verification URL.</td><td>Anonymous proof lookup; no clinical record access.</td></tr>
+</tbody></table>
+<h3>Normal order status sequence</h3>
+<div class="states">REQUESTED → PAYMENT_CLASSIFIED → ACCESSIONED
+    → COLLECTED → IN_TESTING → FOR_VERIFICATION
+    → APPROVED → STORAGE_PENDING → STORED
+    → LEDGER_PENDING → LEDGER_REGISTERED → RELEASED</div>
+<div class="grid"><div class="card"><b>Before submission</b>All required test items need a passing QC attempt or an incorporated referral result. Required repeats must be resolved.</div><div class="card"><b>Before release</b>The result version must be VERIFIED and its publication status REGISTERED. An initial order must be LEDGER_REGISTERED.</div></div>
+<div class="note"><b>Status distinction:</b> order status, result-version status, and publication status are separate. The UI can show an approved order as “Completed” while storage or ledger work is still pending. Only release makes it available as a released result.</div>
+<p class="small">Access starts with authentication and role checks. Seed accounts must complete their required password change before protected workflows.</p>
+<div class="footer"><span>RHU LabChain • Roles and enforced transitions</span><span>02 / 04</span></div>
+</section>
+<section class="page">
+<div class="eyebrow">Service workflow</div><h2>How approval becomes a public proof</h2>
+<p>The browser reaches four services through the gateway. Authentication owns identity and sessions; Records &amp; Sync coordinates the laboratory workflow. Each service owns its data.</p>
+<div class="pipeline">
+<div class="stage"><b>1. Records &amp; Sync: approve the immutable version</b>Commit approval, audit/history, and a STORE_APPROVED_RESULT outbox event. Build the canonical result snapshot.</div><div class="arrow">↓</div>
+<div class="stage"><b>2. Encrypted Storage: protect and store the snapshot</b>Create an AES-256-GCM package with a fresh data key and nonce. Store the encrypted envelope in private IPFS, or the labeled filesystem adapter.</div><div class="arrow">↓</div>
+<div class="stage"><b>3. Records &amp; Sync: save the storage receipt</b>Retain the ciphertext hash and protected object reference for the exact record/version, then enqueue REGISTER_LEDGER.</div><div class="arrow">↓</div>
+<div class="stage"><b>4. Verification: register proof and return a receipt</b>Register opaque record/version and integrity metadata through Fabric Gateway, or the labeled file ledger. Records advances to LEDGER_REGISTERED.</div><div class="arrow">↓</div>
+<div class="stage"><b>5. Supervisor + services: release the registered version</b>The supervisor requests release. Verification records the ledger release and issues an opaque token and URL; Records saves the receipt and marks the version RELEASED.</div><div class="arrow">↓</div>
+<div class="stage"><b>6. Separate access paths: private report and public verification</b>Authorized doctors and the linked patient access the released report. /verify/&lt;opaque-token&gt; checks token validity and the registered proof.</div>
+</div>
+<h3>What the public verifier sees</h3>
+<p class="small">Verification status, opaque record identifier, version, issuing organization, approval/release timestamps, and ledger label. Patient identity, test names and values, notes, CIDs, and keys are excluded. This is a proof/status check; it does not independently validate clinical accuracy or an uploaded report file.</p>
+<div class="grid"><div class="card"><b>Native development</b>File-backed data, encrypted filesystem objects, and a simulated file ledger.</div><div class="card"><b>Docker / Fabric</b>Base Docker uses MySQL and private Kubo. Fabric needs its separate bootstrap; check readiness for fabric and simulated: false.</div></div>
+<div class="footer"><span>RHU LabChain • Approval, storage, integrity, release</span><span>03 / 04</span></div>
+</section>
+<section class="page">
+<div class="eyebrow">Exceptions and traceability</div><h2>When the normal flow pauses</h2>
+<div class="branch"><b>Rejected specimen</b>Record the rejection reason. The order can enter RECOLLECTION_REQUIRED, then return to accession for a new specimen. Do not advance the rejected sample into testing.</div>
+<div class="branch"><b>QC failure, repeat testing, or referral</b>Keep the result in laboratory work until required QC passes or an external referral result is incorporated. Resolve the required repeat before submitting.</div>
+<div class="branch"><b>Supervisor rejection</b>Keep the rejected version and reason, and create a linked draft. For the initial workflow the order returns to IN_TESTING; the next version needs verification again.</div>
+<div class="branch"><b>Correction after approval or release</b>Create a linked new version; repeat QC/submission, approval, storage, registration, and release. Releasing a correction marks the prior released version SUPERSEDED in Records. Do not assume that this automatically revokes an older public token.</div>
+<div class="branch"><b>Storage, ledger, or release failure</b>Keep the failed step visible in the outbox. Retries reuse the event idempotency key. The current handler uses increasing delays, capped at one hour, and changes to FAILED_REVIEW after ten failed attempts.</div>
+<div class="branch"><b>Connection loss or synchronization conflict</b>Supported drafts and queued commands use IndexedDB. Reconnect and synchronize; review duplicate or revision-conflict receipts. Approval and release require current online server state. Offline synchronization remains a prototype capability.</div>
+<div class="branch"><b>Invalid, expired, or revoked QR token</b>Show the verification outcome without exposing patient information. A failed lookup must not be presented as a verified report.</div>
+<h3>Repository sources</h3>
+<p class="small">Prepared from documentation and source inspection; no live workflow or infrastructure test was run for this document. The existing E2E scenario provides a synthetic example of the complete journey.</p>
+<ul class="sources">
+<li>README.md; docs/ARCHITECTURE.md; docs/OFFLINE_SYNC.md</li>
+<li>services/records-service/src/domain/workflow.js; statuses.js</li>
+<li>services/records-service/src/services/recordsService.js</li>
+<li>services/verification-service/src/services/verification-service.js</li>
+<li>apps/web/src/offline/indexedDb.js</li>
+<li>tests/e2e/specs/full-laboratory-flow.spec.js</li>
+</ul>
+<div class="footer"><span>RHU LabChain • Exception paths and source references</span><span>04 / 04</span></div>
+</section></body></html>

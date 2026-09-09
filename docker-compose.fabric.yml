@@ -1,0 +1,161 @@
+name: rhu-labchain
+
+services:
+  orderer:
+    image: hyperledger/fabric-orderer:2.5.16
+    hostname: orderer.local
+    profiles: [fabric]
+    environment:
+      FABRIC_LOGGING_SPEC: INFO
+      ORDERER_GENERAL_LISTENADDRESS: 0.0.0.0
+      ORDERER_GENERAL_LISTENPORT: 7050
+      ORDERER_GENERAL_LOCALMSPID: OrdererMSP
+      ORDERER_GENERAL_LOCALMSPDIR: /var/hyperledger/orderer/msp
+      ORDERER_GENERAL_BOOTSTRAPMETHOD: none
+      ORDERER_CHANNELPARTICIPATION_ENABLED: "true"
+      ORDERER_GENERAL_TLS_ENABLED: "true"
+      ORDERER_GENERAL_TLS_PRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_GENERAL_TLS_CERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_GENERAL_TLS_ROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_GENERAL_CLUSTER_ROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_ADMIN_LISTENADDRESS: 0.0.0.0:7053
+      ORDERER_ADMIN_TLS_ENABLED: "true"
+      ORDERER_ADMIN_TLS_CERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_ADMIN_TLS_PRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_ADMIN_TLS_ROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_ADMIN_TLS_CLIENTROOTCAS: '[/var/hyperledger/orderer/tls/ca.crt]'
+      ORDERER_OPERATIONS_LISTENADDRESS: 0.0.0.0:9443
+      ORDERER_METRICS_PROVIDER: prometheus
+    volumes:
+      - ./blockchain/fabric-network/generated/organizations/ordererOrganizations/local/orderers/orderer.local/msp:/var/hyperledger/orderer/msp:ro
+      - ./blockchain/fabric-network/generated/organizations/ordererOrganizations/local/orderers/orderer.local/tls:/var/hyperledger/orderer/tls:ro
+      - fabric_orderer_data:/var/hyperledger/production/orderer
+    networks:
+      fabric_net:
+        aliases: [orderer.local]
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9443/healthz >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  peer0-rhu:
+    image: hyperledger/fabric-peer:2.5.16
+    hostname: peer0.rhu.local
+    profiles: [fabric]
+    environment:
+      FABRIC_CFG_PATH: /etc/hyperledger/peercfg
+      FABRIC_LOGGING_SPEC: INFO
+      CORE_PEER_ID: peer0.rhu.local
+      CORE_PEER_ADDRESS: peer0.rhu.local:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer0.rhu.local:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.rhu.local:7051
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.rhu.local:7051
+      CORE_PEER_LOCALMSPID: RHULabMSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CERT_FILE: /etc/hyperledger/fabric/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /etc/hyperledger/fabric/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /etc/hyperledger/fabric/tls/ca.crt
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: rhu-labchain_fabric_net
+      CORE_OPERATIONS_LISTENADDRESS: 0.0.0.0:9443
+      CORE_METRICS_PROVIDER: prometheus
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./blockchain/fabric-network/generated/organizations/peerOrganizations/rhu.local/peers/peer0.rhu.local/msp:/etc/hyperledger/fabric/msp:ro
+      - ./blockchain/fabric-network/generated/organizations/peerOrganizations/rhu.local/peers/peer0.rhu.local/tls:/etc/hyperledger/fabric/tls:ro
+      - fabric_peer0_rhu_data:/var/hyperledger/production
+    networks:
+      fabric_net:
+        aliases: [peer0.rhu.local]
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9443/healthz >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  peer0-verifier:
+    image: hyperledger/fabric-peer:2.5.16
+    hostname: peer0.verifier.local
+    profiles: [fabric]
+    environment:
+      FABRIC_CFG_PATH: /etc/hyperledger/peercfg
+      FABRIC_LOGGING_SPEC: INFO
+      CORE_PEER_ID: peer0.verifier.local
+      CORE_PEER_ADDRESS: peer0.verifier.local:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer0.verifier.local:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.verifier.local:7051
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.verifier.local:7051
+      CORE_PEER_LOCALMSPID: VerifierMSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CERT_FILE: /etc/hyperledger/fabric/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /etc/hyperledger/fabric/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /etc/hyperledger/fabric/tls/ca.crt
+      CORE_VM_ENDPOINT: unix:///host/var/run/docker.sock
+      CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: rhu-labchain_fabric_net
+      CORE_OPERATIONS_LISTENADDRESS: 0.0.0.0:9443
+      CORE_METRICS_PROVIDER: prometheus
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./blockchain/fabric-network/generated/organizations/peerOrganizations/verifier.local/peers/peer0.verifier.local/msp:/etc/hyperledger/fabric/msp:ro
+      - ./blockchain/fabric-network/generated/organizations/peerOrganizations/verifier.local/peers/peer0.verifier.local/tls:/etc/hyperledger/fabric/tls:ro
+      - fabric_peer0_verifier_data:/var/hyperledger/production
+    networks:
+      fabric_net:
+        aliases: [peer0.verifier.local]
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9443/healthz >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  fabric-tools:
+    image: hyperledger/fabric-tools:2.5.16
+    profiles: [fabric-tools]
+    working_dir: /workspace
+    environment:
+      FABRIC_CFG_PATH: /etc/hyperledger/peercfg
+      CORE_PEER_TLS_ENABLED: "true"
+    volumes:
+      - ./blockchain:/workspace/blockchain
+      - ./blockchain/fabric-network/generated:/network/generated
+    networks: [fabric_net]
+    command: [sleep, infinity]
+
+  verification-service:
+    environment:
+      LEDGER_DRIVER: fabric
+      FABRIC_CHANNEL: labrecords
+      FABRIC_CHAINCODE: labrecord-contract
+      FABRIC_MSP_ID: RHULabMSP
+      FABRIC_GATEWAY_PEER: peer0.rhu.local:7051
+      FABRIC_PEER_HOST_ALIAS: peer0.rhu.local
+      FABRIC_TLS_CERT_PATH: /fabric/peer-tls/ca.crt
+      FABRIC_IDENTITY_CERT_PATH: /fabric/user/signcert.pem
+      FABRIC_IDENTITY_KEY_PATH: /fabric/user/keystore/key.pem
+    volumes:
+      - ./blockchain/fabric-network/generated/application/rhu:/fabric:ro
+    networks: [app_internal, data_internal, fabric_net]
+    depends_on:
+      peer0-rhu:
+        condition: service_healthy
+
+networks:
+  fabric_net:
+    name: rhu-labchain_fabric_net
+
+volumes:
+  fabric_orderer_data: {}
+  fabric_peer0_rhu_data: {}
+  fabric_peer0_verifier_data: {}

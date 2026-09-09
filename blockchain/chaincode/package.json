@@ -1,0 +1,19 @@
+{
+  "name": "@rhu-labchain/labrecord-contract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-minimized Hyperledger Fabric chaincode for RHU LabChain record proofs",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "fabric-chaincode-node start",
+    "build": "node --check src/index.js && node --check src/labrecord-contract-core.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.8",
+    "fabric-shim": "^2.5.8"
+  },
+  "devDependencies": { "vitest": "^3.2.7" }
+}

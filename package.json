@@ -1,0 +1,33 @@
+{
+  "name": "rhu-labchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Phase One prototype for an RHU hybrid laboratory record system.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
+    "blockchain/chaincode",
+    "tests/e2e"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "setup": "node scripts/setup-env.mjs",
+    "dev:local": "node scripts/dev-local.mjs",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test --workspaces --if-present -- --run",
+    "test:e2e": "npm run test --workspace @rhu-labchain/e2e",
+    "validate:infra": "node scripts/validate-infrastructure.mjs",
+    "migrate": "node --env-file-if-exists=.env scripts/workspace-task.mjs migrate",
+    "seed": "node --env-file-if-exists=.env services/auth-service/scripts/seed.js",
+    "check": "npm run build && npm test && node scripts/security-check.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "yaml": "^2.8.1"
+  }
+}

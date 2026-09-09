@@ -1,0 +1,60 @@
+﻿import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConsultationPage } from '../pages/ClinicalPages.jsx';
+import { recordsApi } from '../api/client.js';
+vi.mock('../api/client.js', () => ({ recordsApi: { consultations: vi.fn(), visits: vi.fn(), createConsultation: vi.fn(), requestPatients: vi.fn() } }));
+beforeEach(() => {
+  vi.resetAllMocks();
+  recordsApi.requestPatients.mockResolvedValue({ items: [{ patientId: "patient-2", patientName: "Selected Patient", patientCode: "PT-2", visitId: "visit-2", reasonForVisit: "Checkup" }], total: 1, limit: 20 });
+  recordsApi.consultations.mockResolvedValue({ items: [] });
+  recordsApi.visits.mockResolvedValue({ items: [{ visitId: 'visit-1', patientId: 'patient-1', patientName: 'Synthetic Patient', patientCode: 'PT-1', reasonForVisit: 'Follow-up visit' }] });
+  recordsApi.createConsultation.mockResolvedValue({ consultationId: 'consult-1' });
+});
+afterEach(cleanup);
+describe('doctor visit review', () => {
+  it('selects patients and their visit automatically for a new consultation', async () => {
+    render(<ConsultationPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'New consultation' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Select' }));
+    expect(screen.getByLabelText('Patient')).toHaveValue('Selected Patient');
+    expect(screen.queryByLabelText(/Patient ID|Visit ID/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Reason for visit')).toHaveValue('Checkup');
+    fireEvent.change(screen.getByLabelText('Clinical notes'), { target: { value: 'Reviewed.' } });
+    fireEvent.change(screen.getByLabelText('Assessment'), { target: { value: 'Recorded.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save consultation' }));
+    await screen.findByText('Consultation saved.');
+    expect(recordsApi.createConsultation).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'patient-2', visitId: 'visit-2' }), expect.any(String));
+  });
+  it('shows the registered reason and saves a consultation linked to that visit', async () => {
+    render(<ConsultationPage />);
+    await screen.findByText('Follow-up visit');
+    expect(recordsApi.visits).toHaveBeenCalledWith('OPEN');
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    const dialog=screen.getByRole('dialog');
+    expect(within(dialog).getByLabelText('Patient')).toHaveValue('Synthetic Patient');
+    expect(within(dialog).getByLabelText('Reason for visit')).toHaveValue('Follow-up visit');
+    expect(within(dialog).getByLabelText('Reason for visit')).toHaveAttribute('readonly');
+    expect(within(dialog).queryByLabelText('Patient ID')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Clinical notes'), { target: { value: 'History reviewed.' } });
+    fireEvent.change(screen.getByLabelText('Assessment'), { target: { value: 'Assessment recorded.' } });
+    recordsApi.visits.mockResolvedValue({ items: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Save consultation' }));
+    await screen.findByText('Consultation saved.');
+    expect(recordsApi.createConsultation).toHaveBeenCalledWith(expect.objectContaining({ patientId: 'patient-1', visitId: 'visit-1', chiefComplaint: 'Follow-up visit', assessment: 'Assessment recorded.' }), expect.any(String));
+    await screen.findByText('No waiting patients');
+  });
+  it('keeps the form open and the same key after a timeout', async () => {
+    recordsApi.createConsultation.mockRejectedValueOnce({ message: 'Request timed out.' });
+    render(<ConsultationPage />);
+    await screen.findByText('Follow-up visit');
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    fireEvent.change(screen.getByLabelText('Clinical notes'), { target: { value: 'History reviewed.' } });
+    fireEvent.change(screen.getByLabelText('Assessment'), { target: { value: 'Assessment recorded.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save consultation' }));
+    await screen.findByText('Request timed out.');
+    const first=recordsApi.createConsultation.mock.calls[0];
+    fireEvent.click(screen.getByRole('button', { name: 'Save consultation' }));
+    await screen.findByText('Consultation saved.');
+    expect(recordsApi.createConsultation.mock.calls[1]).toEqual(first);
+  });
+});

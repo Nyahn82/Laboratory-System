@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+.git
+.env
+data
+backups
+tmp
+coverage
+playwright-report
+test-results
+
